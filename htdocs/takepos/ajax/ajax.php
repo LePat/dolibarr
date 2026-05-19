@@ -130,9 +130,11 @@ if ($action == 'getProducts' && $user->hasRight('takepos', 'run')) {
 				}
 				unset($prod->fields);
 				unset($prod->db);
-
+				
 				$prod->price_formated = price(price2num(empty($prod->multiprices[$pricelevel]) ? $prod->price : $prod->multiprices[$pricelevel], 'MT'), 1, $langs, 1, -1, -1, $conf->currency);
 				$prod->price_ttc_formated = price(price2num(empty($prod->multiprices_ttc[$pricelevel]) ? $prod->price_ttc : $prod->multiprices_ttc[$pricelevel], 'MT'), 1, $langs, 1, -1, -1, $conf->currency);
+				
+				$prod->price_ttc = empty($prod->multiprices_ttc[$pricelevel]) ? $prod->price_ttc : $prod->multiprices_ttc[$pricelevel];
 
 				$res[] = $prod;
 			}
@@ -279,7 +281,7 @@ if ($action == 'getProducts' && $user->hasRight('takepos', 'run')) {
 		}
 	}
 
-	$sql = 'SELECT p.rowid, p.ref, p.label, p.tosell, p.tobuy, p.barcode, p.price, p.price_ttc' ;
+	$sql = 'SELECT p.rowid, p.ref, p.label, p.tosell, p.tobuy, p.barcode, p.price, p.price_ttc, p.fk_unit' ;
 	if (getDolGlobalInt('TAKEPOS_PRODUCT_IN_STOCK') == 1) {
 		if (getDolGlobalInt('CASHDESK_ID_WAREHOUSE'.$_SESSION['takeposterminal'])) {
 			$sql .= ', ps.reel';
@@ -337,7 +339,7 @@ if ($action == 'getProducts' && $user->hasRight('takepos', 'run')) {
 	}
 
 	if (getDolGlobalInt('TAKEPOS_PRODUCT_IN_STOCK') == 1 && !getDolGlobalInt('CASHDESK_ID_WAREHOUSE'.$_SESSION['takeposterminal'])) {
-		$sql .= ' GROUP BY p.rowid, p.ref, p.label, p.tosell, p.tobuy, p.barcode, p.price, p.price_ttc';
+		$sql .= ' GROUP BY p.rowid, p.ref, p.label, p.tosell, p.tobuy, p.barcode, p.price, p.price_ttc, p.fk_unit';
 		// Add fields from hooks
 		$parameters = array();
 		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters);
@@ -382,6 +384,7 @@ if ($action == 'getProducts' && $user->hasRight('takepos', 'run')) {
 				'barcode' => $obj->barcode,
 				'price' => empty($objProd->multiprices[$pricelevel]) ? $obj->price : $objProd->multiprices[$pricelevel],
 				'price_ttc' => empty($objProd->multiprices_ttc[$pricelevel]) ? $obj->price_ttc : $objProd->multiprices_ttc[$pricelevel],
+				'fk_unit' => $obj->fk_unit,
 				'object' => 'product',
 				'img' => $ig,
 				'qty' => 1,

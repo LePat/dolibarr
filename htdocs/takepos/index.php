@@ -450,6 +450,9 @@ function LoadProducts(position, issubcat) {
 
 				$("#prodiv"+ishow).data("iscat", 0);
 				$("#prodiv"+ishow).attr("data-iscat", 0);
+				
+				$("#prodiv"+ishow).data("unit", data[idata]['fk_unit']);
+				$("#prodiv"+ishow).data("price-ttc", data[idata]['price_ttc']);
 
 				$("#prodiv"+ishow).attr("class","wrapper2");
 
@@ -1101,30 +1104,30 @@ function WeighingScale(callback) {
 	console.log("Weighing Scale: invoiceid = " + placeid + ", lineid = " + selectedline);
 	<?php if (getDolGlobalString('TAKEPOS_CONNECTOR_TO_WHB_SCALE')) {?>
 		<?php if (getDolGlobalString('WEIGHINGSCALE_PROTOCOL') == "diag06") { ?>
-			// Protocole Dialog-06, il a besoin du prix unitaire, le demander s'il manque
-			var urlProduct;
-			if (idproduct == "" && selectedline > 0) {
-				urlProduct = "<?php echo DOL_URL_ROOT; ?>/api/index.php/takeposconnector/invoices/" + placeid + "/lines/" + selectedline + "/product";
-			} else {
-				urlProduct = "<?php echo DOL_URL_ROOT; ?>/api/index.php/products/" + idproduct;
+			// Protocol Dialog-06: retrieve unit + unit price including VAT in the DOM
+			var unit, priceTtc;
+			if (idproduct != "") {
+				// Source: clicked product tile (search by data-rowid)
+				var tile = $('.wrapper2[data-rowid="' + idproduct + '"]').first();
+				unit = tile.data('unit');
+				priceTtc = tile.data('price-ttc');
+			} else if (selectedline > 0) {
+				// Source: selected shopping cart line
+				unit = $('#' + selectedline).data('unit');
+				priceTtc = $('#' + selectedline).data('price-ttc');
+			} 
+			console.log("WeighingScale unit=" + unit + " priceTtc=" + priceTtc);
+
+			if (callback === undefined) {
+				callback = function(qty) {
+					$("#poslines").load("invoice.php?token=<?php echo newToken(); ?>&action=updateqty&place="+place+"&idline="+selectedline+"&number="+qty);
+				};
 			}
-			$.ajax({
-				type: "GET",
-				headers: { "DOLAPIKEY": '<?php echo $user->api_key; ?>' },
-				url: urlProduct,
-			})
-			.done(function(product) {
-				if (callback === undefined) {
-					callback = function(qty) {
-						$("#poslines").load("invoice.php?token=<?php echo newToken(); ?>&action=updateqty&place="+place+"&idline="+selectedline+"&number="+qty);
-					};
-				}
-				if (product.fk_unit == "2") {
-					askForWeight(product.multiprices_ttc[1], callback, function (errorMessage) {
-						console.log("Erreur: " + errorMessage);
-					});
-				}
-			});
+			if (unit == 2) {
+				askForWeight(priceTtc, callback, function (errorMessage) {
+					console.log("Erreur: " + errorMessage);
+				});
+			}
 		<?php } else { ?>
 			// Protocole par défaut de takeposconnector: réception continue du poids/stabilité
 			editnumber = globalWeight;
